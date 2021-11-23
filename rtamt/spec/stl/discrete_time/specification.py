@@ -20,6 +20,7 @@ from rtamt.spec.stl.discrete_time.reset import STLReset
 from rtamt.enumerations.options import *
 
 from rtamt.exception.stl.exception import STLException
+from rtamt.evaluator.stl.discrete_time.online.python.stl_automata_converter import STLAutomataConverter
 
 class STLDiscreteTimeSpecification(LTLDiscreteTimeSpecification):
     """A class used as a container for STL specifications
@@ -67,6 +68,8 @@ class STLDiscreteTimeSpecification(LTLDiscreteTimeSpecification):
         self.normalize = float(1.0)
 
         self.reseter = STLReset()
+
+        self.syma_converter = STLAutomataConverter()  #pass the spec to the converter
 
 
     # Parses the STL property
@@ -252,6 +255,8 @@ class STLDiscreteTimeSpecification(LTLDiscreteTimeSpecification):
             self.previous_time = float(0.0)
             self.sampling_violation_counter = int(0)
 
+    def to_symbolic_automaton(self):
+        return self.syma_converter.convert(self)
 
     @property
     def sampling_period(self):
