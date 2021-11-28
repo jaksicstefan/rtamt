@@ -1,3 +1,4 @@
+from defer import return_value
 from rtamt.spec.stl.discrete_time.visitor import STLVisitor
 from rtamt.exception.stl.exception import STLNotImplementedException
 from rtamt.exception.ltl.exception import LTLNotImplementedException
@@ -111,14 +112,7 @@ class STLAutomataConverter(STLVisitor):
                     comp_constraint = self.compose_constraints(t1[3], t2[3])
 
                     if comp_constraint.is_sat():
-
-                        print("SYNC VAR"+str(sync_var))
-                        print("BEFORE " + str(comp_constraint.formula))
                         self.remove_sync_var(comp_constraint.formula, sync_var)
-
-                        mu_var_br = 0
-
-                        print("AFTER "+str(comp_constraint.formula))
                         new_state_id = str(t1[2].id) + str(t2[2].id)  # [2] is target
 
                         locidset = set()
@@ -194,95 +188,50 @@ class STLAutomataConverter(STLVisitor):
     # if found a sync var, propagate upward
     ####
 
-    def remove_sync_var(self, formula, common_var):
-        print("\tinput formula: " + str(formula))
 
-        #print("common var"+ common_var)
+
+    def remove_sync_var(self, formula, common_var):
+        #inform  = str(formula)
+        #print("\tinput formula: " + inform)
 
         #if no chioldern
         if isinstance(formula, VariableNode) and (formula.name == common_var):
-            print("FOUND")
-            self.action = 1
-        else:
-            print("FOUND ___")
-            self.action = self.action or 0
+            return 1  #found
+        elif isinstance(formula, VariableNode): # non-sync var
+            return 0  #not_found
+        return_val_arr = []
 
         for idx, child in enumerate(formula.children):
 
-            self.remove_sync_var(child, common_var)
+            ret_val = self.remove_sync_var(child, common_var)
+            #print("DEBUG:returned action ["+str(idx)+"] : " + str(ret_val))
+            return_val_arr.insert(idx, ret_val)
 
-            print("returned action "+ str(self.action))
+        #print("DEBUG:for formula "+ inform +" children returned "+ str(return_val_arr))
 
-            if (self.action == 3): #connect grandfather and grandson
-                #print("returned 3 from a node "+ str(child))
-                print("bypassing the father")
-                formula.children[idx] = child.children[0]
-                self.action = 0
-            elif (self.action == 2): #just in case of a unary operator Not
-                print("2 child removed: " )
-                formula.children.remove(child)
-                self.action = 3
-            elif (self.action == 1):
-                #delete child and propagate 2 upward
+        toreturn = 0
+
+        for index, rva in enumerate(return_val_arr):
+            if (rva == 3): #bypassing the father
+                formula.children[index] = formula.children[index].children[0]
+                toreturn = toreturn if toreturn >0 else 0
+
+            elif (rva == 2): #remove a child of a Not node
+                formula.children.remove(formula.children[index])
+                toreturn = 3
+            elif (rva == 1): # delete child and propagate upward
                 if isinstance(formula, NotNode):  # handleInvertedVars
-                    print("1 child removed: " + str(child))
-                    formula.children.remove(child)
-                    self.action = 2
+                    formula.children.remove(formula.children[index])
+                    toreturn = 2
                 else:
-                    self.action = 3
-            elif (self.action == 0): #? redundant case?
-                if isinstance(formula, VariableNode) and (formula.name == common_var):
-                    self.action = 1
-                else:
-                    print("FOUNDX") #? case NOT(non-sync-var)
-                    self.action = self.action or 0
+                    formula.children.remove(formula.children[index])
+                    toreturn = 3
+            elif (rva == 0):
+                toreturn = toreturn if toreturn > 0 else 0
             else:
-                #print("ERROR : illegal value during constraing update")
-                print("error! the action is None")
-        #return 0
-        #return 0
+                print("error: illegal value. Node traversal returned " + str(rva))
 
-
-
-
-
-
-
-    def old_remove_sync_var(self, formula, common_var):
-
-        for idx, child in enumerate(formula.children):
-            print("\tcontext" + str(child))
-
-            to_remove = self.remove_sync_var(child, common_var)
-
-            if isinstance(formula, VariableNode) and (formula.name == common_var):
-                print("FOUND")
-                return True
-
-            print("to remove" + str(to_remove))
-
-            if not (to_remove is False):  # sync var found in a child
-
-                if isinstance(formula, NotNode):  # handleInvertedVars
-                    print("2B")
-                    return True
-                else:
-                    print("1A")
-                    formula.children.remove(formula.children[idx])
-                    formula = formula.children[0]
-                    #self.prop_form = None
-
-                    #print("3C")
-                    # not_node = False  #replace here
-                    #print("current_node " + str(formula))
-                    #print("removing child " + str(child))
-                    #print("replacing with " + str(formula.children[0]))
-                    #print("ACTUALLY REMOVE"+ str(child) + " FROM " + str(formula))
-                    #formula.children.remove(child)
-                    #formula = formula.children[0]
-                    #print("replaced with " + str(formula.children[0]))
-                    #self.prop_form = formula.children[0] OVDE TREBA DRUGO DETE
-                    return False
+        return toreturn
 
 
     ########## visitor functions ####################
