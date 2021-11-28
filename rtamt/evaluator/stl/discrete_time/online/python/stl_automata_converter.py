@@ -64,7 +64,7 @@ class STLAutomataConverter(STLVisitor):
     # Assuming TT1 and TT2 are well formed.
     ###
     def syncAndCompose(self, tt1, tt2):
-        print("syncAndCompose")
+        #print("DEBUG : syncAndCompose automata t1 with "+ str(tt1.locations.))
 
         compositionTT = SymbolicAutomaton()
 
@@ -108,7 +108,7 @@ class STLAutomataConverter(STLVisitor):
                     t1 = [trans1[0], trans1[1], trans1[2], copy.deepcopy(trans1[3])]
                     t2 = [trans2[0], trans2[1], trans2[2], copy.deepcopy(trans2[3])]
 
-                    print("checking tt1: " + str(t1[0])+ " and tt2: "+ str(t2[0]))
+                    #print("DEBUG: checking tt1: " + str(t1[0])+ " and tt2: "+ str(t2[0]))
                     comp_constraint = self.compose_constraints(t1[3], t2[3])
 
                     if comp_constraint.is_sat():
@@ -312,14 +312,40 @@ class STLAutomataConverter(STLVisitor):
     def visitAnd(self, node, args):
         func_name = inspect.stack()[0][3]
         print(func_name)
-        in_sample_1 = self.visit(node.children[0], args)
-        in_sample_2 = self.visit(node.children[1], args)
+
+        tt_child_1: SymbolicAutomaton = self.visit(node.children[0], args)
+        tt_child_2: SymbolicAutomaton = self.visit(node.children[1], args)
+
+        print(tt_child_1)
+        print(tt_child_2)
+
+        inVar0 = next(iter(tt_child_1.alphabet.output_vars))
+        inVar1 = next(iter(tt_child_2.alphabet.output_vars))
+
+        ttAnd = self.ttbuilder.getAndTester(inVar0, [0, 1], inVar1, [0, 1])
+
+        tt_composition = self.syncAndCompose(tt_child_1, ttAnd)
+        tt_composition = self.syncAndCompose(tt_child_2, tt_composition)
+        return tt_composition
 
     def visitOr(self, node, args):
         func_name = inspect.stack()[0][3]
         print(func_name)
-        in_sample_1 = self.visit(node.children[0], args)
-        in_sample_2 = self.visit(node.children[1], args)
+        tt_child_1: SymbolicAutomaton = self.visit(node.children[0], args)
+        tt_child_2: SymbolicAutomaton = self.visit(node.children[1], args)
+
+        print(tt_child_1)
+        print(tt_child_2)
+
+        inVar0 = next(iter(tt_child_1.alphabet.output_vars))
+        inVar1 = next(iter(tt_child_2.alphabet.output_vars))
+
+        ttOr = self.ttbuilder.getOrTester(inVar0, [0, 1], inVar1, [0, 1])
+
+        tt_composition = self.syncAndCompose(tt_child_1, ttOr)
+        tt_composition = self.syncAndCompose(tt_child_2, tt_composition)
+        return tt_composition
+
 
     def visitImplies(self, node, args):
         func_name = inspect.stack()[0][3]
@@ -337,7 +363,6 @@ class STLAutomataConverter(STLVisitor):
         ttImplies = self.ttbuilder.getImpliesTester(inVar0, [0, 1], inVar1, [0, 1])
 
         tt_composition = self.syncAndCompose(tt_child_1, ttImplies)
-        somvear = 'XXX'
         tt_composition = self.syncAndCompose(tt_child_2, tt_composition)
         return tt_composition
 
