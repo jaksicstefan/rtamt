@@ -39,7 +39,7 @@ if __name__ == "__main__":
 
     # Load traces
     # taken from offline discrete monitor
-    data1 = read_csv('../../offline_monitors/example1.csv')
+    data1 = read_csv('./examples/features/automata_based/example1.csv')
     # data2 = read_csv('example2.csv')
     # data3 = read_csv('example3.csv')
     # data4 = read_csv('example4.csv')
@@ -51,12 +51,13 @@ if __name__ == "__main__":
     # # #
     spec = rtamt.STLDiscreteTimeSpecification(1)
     spec.name = 'Example 1'
-    spec.declare_var('req', 'float')
-    spec.declare_var('gnt', 'float')
-    spec.declare_var('out', 'float')
+    spec.declare_var('req', 'bool')
+    spec.declare_var('gnt', 'bool')
+    spec.declare_var('out', 'bool')
     spec.set_var_io_type('req', 'input')
     spec.set_var_io_type('gnt', 'output')
     #spec.spec = 'out = ((req>=3) implies (eventually[0:5](gnt>=3)))'
+    #TODO - need to try one real-valued spec i.e. X>3 since p<2
     spec.spec = 'out = ( req  implies gnt )'
     spec.semantics = Semantics.STANDARD
     try:
@@ -72,6 +73,8 @@ if __name__ == "__main__":
 
     my_automaton = spec.to_symbolic_automaton()  # this will be implemented as a visitor
 
+    print("BUILDING AUTOMATA COMPLETED:")
+    print(my_automaton)
     # for i in range(len(data1[' gnt'])):
     #    #rob = spec.update(i, [('req', data1[' req'][i][1]), ('gnt', data1[' gnt'][i][1])])
     #    rob = my_automaton.run(i, [('req', data1[' req'][i][1]), ('gnt', data1[' gnt'][i][1])])
