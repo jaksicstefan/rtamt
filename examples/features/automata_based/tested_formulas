@@ -1,0 +1,12 @@
+out = ( req or gnt )
+
+out = ( req implies gnt )
+
+out = ( req implies gnt )
+
+out = ( req and not gnt )
+
+out = ( not gnt )
+
+out = ( req xor gnt )
+

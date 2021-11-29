@@ -12,6 +12,7 @@ from z3 import *
 from syma.constraint.translator.smt_translator import Constraint2SMT, RealConstraint2SMT, BoolConstraint2SMT
 from rtamt.spec.stl.discrete_time.tt_builder import STL_TT_Builder
 from copy import  deepcopy
+from inspect import currentframe
 
 
 import inspect
@@ -56,6 +57,44 @@ class STLAutomataConverter(STLVisitor):
         top_tester = self.visit(specification.top, None)
         # top_automaton = tester2automaton(top_tester)
         return top_tester
+
+    ###
+    #
+    #
+    ###
+    def macro_visit(self):
+
+        frame = currentframe()
+        #self, node, args
+        try:
+            macro_caller_locals = frame.f_back.f_locals
+
+            node = macro_caller_locals["node"]
+            self = macro_caller_locals["self"]
+            args = macro_caller_locals["args"]
+
+            func_name = inspect.stack()[0][3]
+            print(func_name)
+
+            tt_child_1: SymbolicAutomaton = self.visit(node.children[0], args)
+            tt_child_2: SymbolicAutomaton = self.visit(node.children[1], args)
+
+            print(tt_child_1)
+            print(tt_child_2)
+
+            inVar0 = next(iter(tt_child_1.alphabet.output_vars))
+            inVar1 = next(iter(tt_child_2.alphabet.output_vars))
+
+            frame.f_back.f_locals["inVar0"] = inVar0
+            frame.f_back.f_locals["inVar1"] = inVar1
+            frame.f_back.f_locals["tt_child_1"] = tt_child_1
+            frame.f_back.f_locals["tt_child_2"] = tt_child_2
+
+        finally:
+            del frame
+
+        return inVar0, inVar1, tt_child_1, tt_child_2
+
 
     ###
     # Sync and compose takes two temporal testers to create
@@ -305,22 +344,18 @@ class STLAutomataConverter(STLVisitor):
         in_sample_2 = self.visit(node.children[1], args)
 
     def visitNot(self, node, args):
+
         func_name = inspect.stack()[0][3]
-        print(func_name)
-        in_sample = self.visit(node.children[0], args)
+        print(func_name + " " + node.name)
+
+        inVar0 = node.children[0].name
+        # print("NODE NAME"+node.name)
+
+        ttester = self.ttbuilder.getNotTester(inVar0, [0, 1])
+        return ttester
 
     def visitAnd(self, node, args):
-        func_name = inspect.stack()[0][3]
-        print(func_name)
-
-        tt_child_1: SymbolicAutomaton = self.visit(node.children[0], args)
-        tt_child_2: SymbolicAutomaton = self.visit(node.children[1], args)
-
-        print(tt_child_1)
-        print(tt_child_2)
-
-        inVar0 = next(iter(tt_child_1.alphabet.output_vars))
-        inVar1 = next(iter(tt_child_2.alphabet.output_vars))
+        inVar0, inVar1, tt_child_1, tt_child_2 = self.macro_visit()
 
         ttAnd = self.ttbuilder.getAndTester(inVar0, [0, 1], inVar1, [0, 1])
 
@@ -329,16 +364,7 @@ class STLAutomataConverter(STLVisitor):
         return tt_composition
 
     def visitOr(self, node, args):
-        func_name = inspect.stack()[0][3]
-        print(func_name)
-        tt_child_1: SymbolicAutomaton = self.visit(node.children[0], args)
-        tt_child_2: SymbolicAutomaton = self.visit(node.children[1], args)
-
-        print(tt_child_1)
-        print(tt_child_2)
-
-        inVar0 = next(iter(tt_child_1.alphabet.output_vars))
-        inVar1 = next(iter(tt_child_2.alphabet.output_vars))
+        inVar0, inVar1, tt_child_1, tt_child_2 = self.macro_visit()
 
         ttOr = self.ttbuilder.getOrTester(inVar0, [0, 1], inVar1, [0, 1])
 
@@ -348,18 +374,7 @@ class STLAutomataConverter(STLVisitor):
 
 
     def visitImplies(self, node, args):
-        func_name = inspect.stack()[0][3]
-        print(func_name)
-
-        tt_child_1: SymbolicAutomaton = self.visit(node.children[0], args)
-        tt_child_2: SymbolicAutomaton = self.visit(node.children[1], args)
-
-        print(tt_child_1)
-        print(tt_child_2)
-
-        inVar0 = next(iter(tt_child_1.alphabet.output_vars))
-        inVar1 = next(iter(tt_child_2.alphabet.output_vars))
-
+        inVar0, inVar1, tt_child_1, tt_child_2 = self.macro_visit()
         ttImplies = self.ttbuilder.getImpliesTester(inVar0, [0, 1], inVar1, [0, 1])
 
         tt_composition = self.syncAndCompose(tt_child_1, ttImplies)
@@ -367,16 +382,22 @@ class STLAutomataConverter(STLVisitor):
         return tt_composition
 
     def visitIff(self, node, args):
-        func_name = inspect.stack()[0][3]
-        print(func_name)
-        in_sample_1 = self.visit(node.children[0], args)
-        in_sample_2 = self.visit(node.children[1], args)
+        inVar0, inVar1, tt_child_1, tt_child_2 = self.macro_visit()
+
+        ttIff = self.ttbuilder.getIffTester(inVar0, [0, 1], inVar1, [0, 1])
+
+        tt_composition = self.syncAndCompose(tt_child_1, ttIff)
+        tt_composition = self.syncAndCompose(tt_child_2, tt_composition)
+        return tt_composition
 
     def visitXor(self, node, args):
-        func_name = inspect.stack()[0][3]
-        print(func_name)
-        in_sample_1 = self.visit(node.children[0], args)
-        in_sample_2 = self.visit(node.children[1], args)
+        inVar0, inVar1, tt_child_1, tt_child_2 = self.macro_visit()
+
+        ttXor = self.ttbuilder.getXorTester(inVar0, [0, 1], inVar1, [0, 1])
+
+        tt_composition = self.syncAndCompose(tt_child_1, ttXor)
+        tt_composition = self.syncAndCompose(tt_child_2, tt_composition)
+        return tt_composition
 
     def visitEventually(self, node, args):
         func_name = inspect.stack()[0][3]

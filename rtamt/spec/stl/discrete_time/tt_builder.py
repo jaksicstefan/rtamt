@@ -104,9 +104,47 @@ class STL_TT_Builder():
 
         return ttester
 
+    def getXorTester(self, inVar0, dom0, inVar1, dom1, outVar=None):
+        loc0, in_cstlist, outcstlist, ttester = logical_binary_tester()
+
+        ttester.add_transition(loc0, loc0, BoolConstraint(formula=AndNode(in_cstlist[0], outcstlist[1]))) #cst_out_neg
+        ttester.add_transition(loc0, loc0, BoolConstraint(formula=AndNode(in_cstlist[1], outcstlist[0])))
+        ttester.add_transition(loc0, loc0, BoolConstraint(formula=AndNode(in_cstlist[2], outcstlist[0])))
+        ttester.add_transition(loc0, loc0, BoolConstraint(formula=AndNode(in_cstlist[3], outcstlist[1]))) #cst_out_neg
+
+        return ttester
+
+
+    def getNotTester(self, inVar0, dom0, outVar=None):
+        ttester = SymbolicAutomaton()
+        myOutVar = outVar
+
+        # add i/o vars
+        ttester.add_var(inVar0, dom0, "IN")
+        #aut.add_var('a', [-10, 10])
+        if myOutVar is None:
+            myOutVar = self.getNewVar()
+            ttester.add_var(myOutVar, [0, 1], "OUT")  # Boolean
+        else:
+            ttester.add_var(myOutVar, [0, 1], "OUT")  # Boolean
+
+        loc0 = Location(0, initial=True, final=True)
+
+        cst0 = NotNode(VariableNode(inVar0))
+        cst1 = VariableNode(inVar0)
+
+        cst_out = VariableNode(myOutVar)
+        cst_out_neg = NotNode(VariableNode(myOutVar))
+
+        ttester.add_location(loc0) #init, acc
+
+        ttester.add_transition(loc0, loc0, BoolConstraint(formula=AndNode(cst0, cst_out)))
+        ttester.add_transition(loc0, loc0, BoolConstraint(formula=AndNode(cst1, cst_out_neg)))
+        return ttester
+
+
 
     def getVariableTester(self, inVar0, dom0, outVar=None):
-        # resetIDs
         ttester = SymbolicAutomaton()
         myOutVar = outVar
 

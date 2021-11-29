@@ -58,7 +58,7 @@ if __name__ == "__main__":
     spec.set_var_io_type('gnt', 'output')
     #spec.spec = 'out = ((req>=3) implies (eventually[0:5](gnt>=3)))'
     #TODO - need to try one real-valued spec i.e. X>3 since p<2
-    spec.spec = 'out = ( req or gnt )'
+    spec.spec = 'out = ( x > 3 )'
     spec.semantics = Semantics.STANDARD
     try:
         spec.parse()
